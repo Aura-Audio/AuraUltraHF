@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UHF Sound Lab — Ultra-High Frequency Generator</title>
+<style>
+  :root {
+    --bg: #0a0a12; --bg-panel: #13131f; --bg-panel-2: #1a1a2a;
+    --accent: #7c5cff; --accent-2: #00e5ff; --accent-warm: #ff5c7c;
+    --text: #e8e8f0; --text-dim: #8a8aa0; --border: #2a2a3d;
+    --danger: #ff4466; --success: #00e08a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh;
+    padding: 16px; line-height: 1.5;
+  }
+  .container { max-width: 1400px; margin: 0 auto; }
+  header {
+    text-align: center; margin-bottom: 24px; padding: 20px 16px;
+    background: linear-gradient(135deg, rgba(124,92,255,0.15), rgba(0,229,255,0.08));
+    border-radius: 16px; border: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: clamp(24px, 4vw, 36px);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    margin-bottom: 8px; letter-spacing: -0.5px;
+  }
+  header p { color: var(--text-dim); font-size: 14px; }
+  .warning {
+    background: rgba(255,68,102,0.1); border: 1px solid rgba(255,68,102,0.3);
+    color: #ff8899; padding: 12px 16px; border-radius: 10px;
+    margin: 16px 0; font-size: 13px; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .warning::before { content: "⚠"; font-size: 18px; flex-shrink: 0; }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px; margin-bottom: 16px;
+  }
+  .panel {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px;
+  }
+  .panel h2 {
+    font-size: 16px; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px; color: var(--accent-2);
+  }  .panel h2 .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-2); box-shadow: 0 0 10px var(--accent-2);
+  }
+  .control-row { margin-bottom: 14px; }
+  .control-label {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 6px; font-size: 12px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .control-value {
+    color: var(--accent-2); font-family: 'SF Mono', 'Monaco', monospace;
+    font-weight: 600; font-size: 13px;
+  }
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none; width: 100%;
+    height: 6px; background: var(--bg-panel-2);
+    border-radius: 3px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 50%; cursor: pointer;
+    box-shadow: 0 0 10px rgba(124,92,255,0.5); transition: transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border-radius: 50%; cursor: pointer; border: none;
+    box-shadow: 0 0 10px rgba(124,92,255,0.5);
+  }
+  select, button {
+    background: var(--bg-panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; cursor: pointer;
+    font-family: inherit; transition: all 0.2s; width: 100%;
+  }
+  select:hover, select:focus { border-color: var(--accent); outline: none; }
+  .button-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn {
+    flex: 1; min-width: 80px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px; font-size: 12px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    border: none; color: #fff;
+  }
+  .btn-primary:hover { opacity: 0.9; }  .btn-danger {
+    background: rgba(255,68,102,0.15); border-color: var(--danger); color: var(--danger);
+  }
+  .btn-danger:hover { background: rgba(255,68,102,0.25); }
+  .btn-success {
+    background: rgba(0,224,138,0.15); border-color: var(--success); color: var(--success);
+  }
+  .status-indicator {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--text-dim);
+    margin-right: 6px; vertical-align: middle;
+  }
+  .status-indicator.active {
+    background: var(--success); box-shadow: 0 0 10px var(--success);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.5; }
+  }
+  .visualizer-panel {
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px; margin-bottom: 16px;
+  }
+  canvas {
+    width: 100%; height: 180px; background: #06060c;
+    border-radius: 10px; display: block;
+  }
+  .viz-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .viz-tab {
+    flex: 1; padding: 8px; background: var(--bg-panel-2);
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: 12px; text-transform: uppercase;
+    color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+  }
+  .viz-tab.active {
+    background: rgba(124,92,255,0.2); border-color: var(--accent); color: var(--accent-2);
+  }
+  .info-box {
+    background: var(--bg-panel-2); border-left: 3px solid var(--accent);
+    padding: 10px 14px; margin: 12px 0; font-size: 12px;
+    color: var(--text-dim); border-radius: 4px;
+  }
+  .waveform-buttons {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px; margin-bottom: 12px;
+  }
+  .waveform-btn {
+    padding: 6px 4px; font-size: 11px; text-align: center;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; color: var(--text-dim); transition: all 0.2s;  }
+  .waveform-btn.active {
+    background: rgba(124,92,255,0.2); border-color: var(--accent); color: var(--accent-2);
+  }
+  .meter {
+    height: 4px; background: var(--bg-panel-2);
+    border-radius: 2px; overflow: hidden; margin-top: 4px;
+  }
+  .meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), var(--accent-2), var(--danger));
+    width: 0%; transition: width 0.1s;
+  }
+  .section-divider { border: 0; height: 1px; background: var(--border); margin: 14px 0; }
+  .toggle-row {
+    display: flex; justify-content: space-between;
+    align-items: center; padding: 8px 0;
+  }
+  .toggle {
+    position: relative; width: 42px; height: 22px;
+    background: var(--bg-panel-2); border: 1px solid var(--border);
+    border-radius: 11px; cursor: pointer; transition: all 0.3s;
+  }
+  .toggle.on {
+    background: rgba(0,224,138,0.2); border-color: var(--success);
+  }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; background: var(--text);
+    border-radius: 50%; transition: all 0.3s;
+  }
+  .toggle.on::after { left: 22px; background: var(--success); }
+  .status-bar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,18,0.95); backdrop-filter: blur(10px);
+    padding: 8px 16px; border-radius: 10px; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    border: 1px solid var(--border); font-size: 12px;
+  }
+  footer {
+    text-align: center; padding: 16px;
+    color: var(--text-dim); font-size: 12px; margin-top: 24px;
+  }
+  @media (max-width: 480px) {
+    body { padding: 10px; } .panel { padding: 14px; } header { padding: 14px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">  <header>
+    <h1>🔊 UHF Sound Lab</h1>
+    <p>Ultra-High Frequency Generator — 17.5 kHz to 24 kHz range</p>
+  </header>
+
+  <div class="warning">
+    <div>
+      <strong>Safety Notice:</strong> Ultrasonic frequencies at high volumes can still cause hearing damage or discomfort.
+      Keep volume low, especially on headphones. Most smartphone/laptop speakers have limited output above 18 kHz.
+      Prolonged exposure to intense ultrasonic sound is not recommended.
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div>
+      <span class="status-indicator" id="statusDot"></span>
+      <span id="statusText">Audio Engine Idle</span>
+    </div>
+    <div>Output: <span id="outputInfo" class="control-value">—</span></div>
+  </div>
+
+  <div class="visualizer-panel">
+    <div class="viz-tabs">
+      <div class="viz-tab active" data-viz="waveform">Waveform</div>
+      <div class="viz-tab" data-viz="spectrum">Spectrum</div>
+      <div class="viz-tab" data-viz="spectrogram">Spectrogram</div>
+    </div>
+    <canvas id="visualizer"></canvas>
+    <div class="meter"><div class="meter-fill" id="levelMeter"></div></div>
+  </div>
+
+  <div class="grid">
+    <!-- TONE GENERATOR -->
+    <div class="panel">
+      <h2><span class="dot"></span>Tone Generator</h2>
+      <div class="waveform-buttons">
+        <div class="waveform-btn active" data-wave="sine">Sine</div>
+        <div class="waveform-btn" data-wave="square">Square</div>
+        <div class="waveform-btn" data-wave="sawtooth">Saw</div>
+        <div class="waveform-btn" data-wave="triangle">Triangle</div>
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Frequency</span>
+          <span class="control-value" id="freqVal">19000 Hz</span>
+        </div>
+        <input type="range" id="frequency" min="17500" max="24000" value="19000" step="100">
+      </div>
+      <div class="control-row">
+        <div class="control-label">          <span>Gain</span><span class="control-value" id="gainVal">0.20</span>
+        </div>
+        <input type="range" id="gain" min="0" max="1" value="0.2" step="0.01">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Detune (cents)</span>
+          <span class="control-value" id="detuneVal">0</span>
+        </div>
+        <input type="range" id="detune" min="-100" max="100" value="0" step="1">
+      </div>
+      <hr class="section-divider">
+      <div class="toggle-row">
+        <span style="font-size:12px; color: var(--text-dim); text-transform: uppercase;">Binaural Mode</span>
+        <div class="toggle" id="binauralToggle"></div>
+      </div>
+      <div class="control-row" id="binauralControls" style="display:none;">
+        <div class="control-label">
+          <span>Beat Frequency</span>
+          <span class="control-value" id="binauralVal">10 Hz</span>
+        </div>
+        <input type="range" id="binauralFreq" min="0" max="40" value="10" step="0.5">
+      </div>
+      <div class="button-row">
+        <button class="btn btn-primary" id="toneStart">▶ Start</button>
+        <button class="btn btn-danger" id="toneStop">■ Stop</button>
+      </div>
+    </div>
+
+    <!-- NOISE GENERATOR -->
+    <div class="panel">
+      <h2><span class="dot"></span>Noise Generator</h2>
+      <div class="waveform-buttons">
+        <div class="waveform-btn active" data-noise="white">White</div>
+        <div class="waveform-btn" data-noise="pink">Pink</div>
+        <div class="waveform-btn" data-noise="brown">Brown</div>
+        <div class="waveform-btn" data-noise="blue">Blue</div>
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>High-Pass Cutoff</span>
+          <span class="control-value" id="hpVal">17500 Hz</span>
+        </div>
+        <input type="range" id="hpFilter" min="5000" max="22000" value="17500" step="100">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Resonance (Q)</span>
+          <span class="control-value" id="qVal">0.71</span>
+        </div>        <input type="range" id="qFactor" min="0.1" max="20" value="0.71" step="0.1">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Gain</span><span class="control-value" id="noiseGainVal">0.30</span>
+        </div>
+        <input type="range" id="noiseGain" min="0" max="1" value="0.3" step="0.01">
+      </div>
+      <div class="button-row">
+        <button class="btn btn-primary" id="noiseStart">▶ Start</button>
+        <button class="btn btn-danger" id="noiseStop">■ Stop</button>
+      </div>
+      <div class="info-box">
+        Blue noise rises 6dB/octave — excellent for UHF focus. High-pass isolates the ultrasonic band.
+      </div>
+    </div>
+
+    <!-- SWEEP GENERATOR -->
+    <div class="panel">
+      <h2><span class="dot"></span>Sweep Generator</h2>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Start Frequency</span>
+          <span class="control-value" id="sweepStartVal">17500 Hz</span>
+        </div>
+        <input type="range" id="sweepStart" min="17500" max="24000" value="17500" step="100">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>End Frequency</span>
+          <span class="control-value" id="sweepEndVal">22000 Hz</span>
+        </div>
+        <input type="range" id="sweepEnd" min="17500" max="24000" value="22000" step="100">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Duration (seconds)</span>
+          <span class="control-value" id="sweepDurVal">5.0 s</span>
+        </div>
+        <input type="range" id="sweepDuration" min="1" max="30" value="5" step="0.5">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Curve</span>
+          <select id="sweepCurve">
+            <option value="linear">Linear</option>
+            <option value="exponential" selected>Exponential (Log)</option>
+            <option value="reverse">Reverse Sweep</option>
+          </select>
+        </div>      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Gain</span><span class="control-value" id="sweepGainVal">0.25</span>
+        </div>
+        <input type="range" id="sweepGain" min="0" max="1" value="0.25" step="0.01">
+      </div>
+      <div class="toggle-row">
+        <span style="font-size:12px; color: var(--text-dim); text-transform: uppercase;">Loop</span>
+        <div class="toggle on" id="sweepLoopToggle"></div>
+      </div>
+      <div class="button-row">
+        <button class="btn btn-primary" id="sweepStart">▶ Start Sweep</button>
+        <button class="btn btn-danger" id="sweepStop">■ Stop</button>
+      </div>
+    </div>
+
+    <!-- EFFECTS -->
+    <div class="panel">
+      <h2><span class="dot"></span>Modulation & Effects</h2>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Tremolo Rate (Hz)</span>
+          <span class="control-value" id="tremoloRateVal">0 Hz</span>
+        </div>
+        <input type="range" id="tremoloRate" min="0" max="30" value="0" step="0.1">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Tremolo Depth</span>
+          <span class="control-value" id="tremoloDepthVal">0</span>
+        </div>
+        <input type="range" id="tremoloDepth" min="0" max="1" value="0" step="0.01">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Vibrato Rate (Hz)</span>
+          <span class="control-value" id="vibratoRateVal">0 Hz</span>
+        </div>
+        <input type="range" id="vibratoRate" min="0" max="30" value="0" step="0.1">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Vibrato Depth (cents)</span>
+          <span class="control-value" id="vibratoDepthVal">0</span>
+        </div>
+        <input type="range" id="vibratoDepth" min="0" max="100" value="0" step="1">
+      </div>
+      <hr class="section-divider">
+      <div class="control-row">        <div class="control-label">
+          <span>Low-Pass Filter</span>
+          <span class="control-value" id="lpVal">22000 Hz</span>
+        </div>
+        <input type="range" id="lpFilter" min="17500" max="22000" value="22000" step="100">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Band-Pass Focus</span>
+          <span class="control-value" id="bpVal">Off</span>
+        </div>
+        <input type="range" id="bpFilter" min="0" max="1" value="0" step="0.01">
+      </div>
+      <hr class="section-divider">
+      <div class="control-row">
+        <div class="control-label">
+          <span>Delay Time</span>
+          <span class="control-value" id="delayTimeVal">0.00 s</span>
+        </div>
+        <input type="range" id="delayTime" min="0" max="1" value="0" step="0.01">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Delay Feedback</span>
+          <span class="control-value" id="delayFbVal">0.0</span>
+        </div>
+        <input type="range" id="delayFb" min="0" max="0.9" value="0" step="0.01">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Master Gain</span>
+          <span class="control-value" id="masterGainVal">0.80</span>
+        </div>
+        <input type="range" id="masterGain" min="0" max="1" value="0.8" step="0.01">
+      </div>
+    </div>
+
+    <!-- PULSE / PATTERN -->
+    <div class="panel">
+      <h2><span class="dot"></span>Pulse / Pattern Mode</h2>
+      <div class="toggle-row">
+        <span style="font-size:12px; color: var(--text-dim); text-transform: uppercase;">Enable Pulsing</span>
+        <div class="toggle" id="pulseToggle"></div>
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>On Time (ms)</span>
+          <span class="control-value" id="pulseOnVal">200 ms</span>
+        </div>
+        <input type="range" id="pulseOn" min="50" max="2000" value="200" step="50">      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Off Time (ms)</span>
+          <span class="control-value" id="pulseOffVal">200 ms</span>
+        </div>
+        <input type="range" id="pulseOff" min="50" max="2000" value="200" step="50">
+      </div>
+      <div class="control-row">
+        <div class="control-label">
+          <span>Rise/Fall (ms)</span>
+          <span class="control-value" id="pulseRampVal">20 ms</span>
+        </div>
+        <input type="range" id="pulseRamp" min="0" max="200" value="20" step="5">
+      </div>
+      <hr class="section-divider">
+      <div class="info-box">
+        Pulse mode applies to the currently active tone/noise source. Useful for testing response or creating rhythmic UHF patterns.
+      </div>
+      <div class="button-row">
+        <button class="btn btn-success" id="stopAll">⏹ Stop All</button>
+        <button class="btn" id="resetBtn">↺ Reset All</button>
+      </div>
+    </div>
+
+    <!-- PRESETS -->
+    <div class="panel">
+      <h2><span class="dot"></span>Presets</h2>
+      <div class="waveform-buttons" style="grid-template-columns: repeat(2, 1fr);">
+        <div class="waveform-btn" data-preset="mosquito">Mosquito (17.5k)</div>
+        <div class="waveform-btn" data-preset="teen">Teen Tone (19k)</div>
+        <div class="waveform-btn" data-preset="ultra">Ultra Sweep</div>
+        <div class="waveform-btn" data-preset="noise">UHF Hiss</div>
+        <div class="waveform-btn" data-preset="binaural">Binaural Edge</div>
+        <div class="waveform-btn" data-preset="pulse">Pulse Train</div>
+      </div>
+      <div class="info-box">
+        <strong>Mosquito:</strong> Classic 17.5kHz tone (often inaudible to adults).<br>
+        <strong>Teen Tone:</strong> 19kHz — typically audible only to younger people.<br>
+        <strong>Ultra Sweep:</strong> Slow log sweep 18k→22k.<br>
+        <strong>UHF Hiss:</strong> Blue noise, high-passed at 18k.<br>
+        <strong>Binaural Edge:</strong> 20kHz + 20.015kHz binaural pair.<br>
+        <strong>Pulse Train:</strong> 18kHz pulsing at 2Hz.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>UHF Sound Lab · Web Audio API · Best with quality headphones or studio monitors</p>
+    <p style="margin-top:6px;">Note: Phone/laptop speakers may attenuate >18kHz severely. Use external audio for accurate UHF reproduction.</p>  </footer>
+</div>
+
+<script>
+(() => {
+  let audioCtx = null, masterGainNode = null, analyser = null;
+  let activeSources = [], effectsChain = {}, pulseInterval = null;
+  const $ = id => document.getElementById(id);
+
+  const initAudio = async () => {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    masterGainNode = audioCtx.createGain();
+    masterGainNode.gain.value = parseFloat($('masterGain').value);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 8192; analyser.smoothingTimeConstant = 0.85;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = parseFloat($('lpFilter').value); lp.Q.value = 0.7;
+    const bp = audioCtx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 19500; bp.Q.value = 1;
+    const delay = audioCtx.createDelay(2);
+    delay.delayTime.value = parseFloat($('delayTime').value);
+    const delayFb = audioCtx.createGain();
+    delayFb.gain.value = parseFloat($('delayFb').value);
+    const delayWet = audioCtx.createGain(); delayWet.gain.value = 0;
+    const delayDry = audioCtx.createGain(); delayDry.gain.value = 1;
+    const tremoloLFO = audioCtx.createOscillator();
+    tremoloLFO.frequency.value = parseFloat($('tremoloRate').value);
+    const tremoloDepthGain = audioCtx.createGain();
+    tremoloDepthGain.gain.value = parseFloat($('tremoloDepth').value);
+    tremoloLFO.connect(tremoloDepthGain); tremoloLFO.start();
+    effectsChain = { lp, bp, delay, delayFb, delayWet, delayDry, tremoloLFO, tremoloDepthGain };
+    lp.connect(bp); lp.connect(delayDry); bp.connect(delayWet);
+    delay.connect(delayFb); delayFb.connect(delay); delay.connect(delayDry);
+    delayDry.connect(masterGainNode); delayWet.connect(masterGainNode);
+    tremoloDepthGain.connect(masterGainNode.gain);
+    masterGainNode.connect(analyser); analyser.connect(audioCtx.destination);
+    $('statusDot').classList.add('active');
+    $('statusText').textContent = `Audio Engine Active · ${audioCtx.sampleRate} Hz`;
+    $('outputInfo').textContent = `${audioCtx.sampleRate/1000}kHz SR`;
+    startVisualization();
+  };
+
+  let toneOscLeft = null, toneOscRight = null;
+  let toneGainL = null, toneGainR = null;
+  let toneVibratoLFO = null, toneVibratoDepthGain = null;
+  let isToneRunning = false;
+
+  const startTone = async () => {    await initAudio(); stopTone();
+    const freq = parseFloat($('frequency').value);
+    const gain = parseFloat($('gain').value);
+    const detune = parseFloat($('detune').value);
+    const wave = document.querySelector('[data-wave].active')?.dataset.wave || 'sine';
+    const binaural = $('binauralToggle').classList.contains('on');
+    const beatFreq = parseFloat($('binauralFreq').value);
+    toneVibratoLFO = audioCtx.createOscillator();
+    toneVibratoLFO.frequency.value = parseFloat($('vibratoRate').value);
+    toneVibratoDepthGain = audioCtx.createGain();
+    toneVibratoDepthGain.gain.value = parseFloat($('vibratoDepth').value);
+    toneVibratoLFO.connect(toneVibratoDepthGain); toneVibratoLFO.start();
+    toneGainL = audioCtx.createGain(); toneGainL.gain.value = gain;
+    toneOscLeft = audioCtx.createOscillator();
+    toneOscLeft.type = wave; toneOscLeft.frequency.value = freq;
+    toneOscLeft.detune.value = detune;
+    toneVibratoDepthGain.connect(toneOscLeft.detune);
+    const panL = audioCtx.createStereoPanner();
+    panL.pan.value = binaural ? -1 : 0;
+    toneOscLeft.connect(toneGainL).connect(panL).connect(effectsChain.lp);
+    if (binaural) {
+      toneGainR = audioCtx.createGain(); toneGainR.gain.value = gain;
+      toneOscRight = audioCtx.createOscillator();
+      toneOscRight.type = wave; toneOscRight.frequency.value = freq + beatFreq;
+      toneOscRight.detune.value = detune;
+      toneVibratoDepthGain.connect(toneOscRight.detune);
+      const panR = audioCtx.createStereoPanner(); panR.pan.value = 1;
+      toneOscRight.connect(toneGainR).connect(panR).connect(effectsChain.lp);
+      toneOscRight.start();
+    }
+    toneOscLeft.start(); isToneRunning = true;
+    activeSources.push({ type: 'tone', oscs: binaural ? [toneOscLeft, toneOscRight] : [toneOscLeft] });
+    applyPulseIfActive();
+  };
+
+  const stopTone = () => {
+    if (toneOscLeft) { try { toneOscLeft.stop(); } catch(e){} toneOscLeft.disconnect(); toneOscLeft = null; }
+    if (toneOscRight) { try { toneOscRight.stop(); } catch(e){} toneOscRight.disconnect(); toneOscRight = null; }
+    if (toneVibratoLFO) { try { toneVibratoLFO.stop(); } catch(e){} toneVibratoLFO.disconnect(); toneVibratoLFO = null; }
+    if (toneVibratoDepthGain) { toneVibratoDepthGain.disconnect(); toneVibratoDepthGain = null; }
+    if (toneGainL) { toneGainL.disconnect(); toneGainL = null; }
+    if (toneGainR) { toneGainR.disconnect(); toneGainR = null; }
+    isToneRunning = false;
+    activeSources = activeSources.filter(s => s.type !== 'tone');
+  };
+
+  let noiseSource = null, noiseGain = null, noiseFilter = null, noiseBuffer = null;
+  let noiseType = 'white', isNoiseRunning = false;
+
+  const createNoiseBuffer = (type) => {    const sampleRate = audioCtx.sampleRate;
+    const length = sampleRate * 4;
+    const buffer = audioCtx.createBuffer(2, length, sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buffer.getChannelData(ch);
+      if (type === 'white') {
+        for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+      } else if (type === 'pink') {
+        let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+        for (let i = 0; i < length; i++) {
+          const w = Math.random()*2-1;
+          b0 = 0.99886*b0 + w*0.0555179; b1 = 0.99332*b1 + w*0.0750759;
+          b2 = 0.96900*b2 + w*0.1538520; b3 = 0.86650*b3 + w*0.3104856;
+          b4 = 0.55000*b4 + w*0.5329522; b5 = -0.7616*b5 - w*0.0168980;
+          data[i] = (b0+b1+b2+b3+b4+b5+b6+w*0.5362) * 0.11;
+          b6 = w*0.115926;
+        }
+      } else if (type === 'brown') {
+        let last = 0;
+        for (let i = 0; i < length; i++) {
+          const w = Math.random()*2-1;
+          data[i] = (last + 0.02*w) / 1.02; last = data[i]; data[i] *= 3.5;
+        }
+      } else if (type === 'blue') {
+        let last = 0;
+        for (let i = 0; i < length; i++) {
+          const w = Math.random()*2-1;
+          data[i] = w - last; last = w;
+        }
+      }
+    }
+    return buffer;
+  };
+
+  const startNoise = async () => {
+    await initAudio(); stopNoise();
+    noiseBuffer = createNoiseBuffer(noiseType);
+    noiseFilter = audioCtx.createBiquadFilter();
+    noiseFilter.type = 'highpass';
+    noiseFilter.frequency.value = parseFloat($('hpFilter').value);
+    noiseFilter.Q.value = parseFloat($('qFactor').value);
+    noiseGain = audioCtx.createGain();
+    noiseGain.gain.value = parseFloat($('noiseGain').value);
+    noiseSource = audioCtx.createBufferSource();
+    noiseSource.buffer = noiseBuffer; noiseSource.loop = true;
+    noiseSource.connect(noiseFilter).connect(noiseGain).connect(effectsChain.lp);
+    noiseSource.start(); isNoiseRunning = true;
+    activeSources.push({ type: 'noise' });
+    applyPulseIfActive();
+  };
+  const stopNoise = () => {
+    if (noiseSource) { try { noiseSource.stop(); } catch(e){} noiseSource.disconnect(); noiseSource = null; }
+    if (noiseFilter) { noiseFilter.disconnect(); noiseFilter = null; }
+    if (noiseGain) { noiseGain.disconnect(); noiseGain = null; }
+    isNoiseRunning = false;
+    activeSources = activeSources.filter(s => s.type !== 'noise');
+  };
+
+  let sweepOsc = null, sweepGain = null, sweepRunning = false, sweepTimeout = null;
+
+  const startSweep = async () => {
+    await initAudio(); stopSweep();
+    const startF = parseFloat($('sweepStart').value);
+    const endF = parseFloat($('sweepEnd').value);
+    const dur = parseFloat($('sweepDuration').value);
+    const curve = $('sweepCurve').value;
+    const gain = parseFloat($('sweepGain').value);
+    const loop = $('sweepLoopToggle').classList.contains('on');
+    sweepGain = audioCtx.createGain(); sweepGain.gain.value = gain;
+    sweepOsc = audioCtx.createOscillator(); sweepOsc.type = 'sine';
+    sweepOsc.frequency.setValueAtTime(startF, audioCtx.currentTime);
+    const endT = audioCtx.currentTime + dur;
+    if (curve === 'linear') sweepOsc.frequency.linearRampToValueAtTime(endF, endT);
+    else if (curve === 'exponential') sweepOsc.frequency.exponentialRampToValueAtTime(Math.max(endF, 0.01), endT);
+    else if (curve === 'reverse') {
+      sweepOsc.frequency.setValueAtTime(endF, audioCtx.currentTime);
+      sweepOsc.frequency.linearRampToValueAtTime(startF, endT);
+    }
+    sweepOsc.connect(sweepGain).connect(effectsChain.lp);
+    sweepOsc.start(); sweepRunning = true;
+    activeSources.push({ type: 'sweep' });
+    sweepTimeout = setTimeout(() => {
+      stopSweep();
+      if (loop) setTimeout(startSweep, 200);
+    }, dur * 1000);
+    applyPulseIfActive();
+  };
+
+  const stopSweep = () => {
+    if (sweepTimeout) { clearTimeout(sweepTimeout); sweepTimeout = null; }
+    if (sweepOsc) { try { sweepOsc.stop(); } catch(e){} sweepOsc.disconnect(); sweepOsc = null; }
+    if (sweepGain) { sweepGain.disconnect(); sweepGain = null; }
+    sweepRunning = false;
+    activeSources = activeSources.filter(s => s.type !== 'sweep');
+  };
+
+  const applyPulseIfActive = () => {
+    if (!$('pulseToggle').classList.contains('on')) return;
+    if (pulseInterval) clearTimeout(pulseInterval);    const onTime = parseFloat($('pulseOn').value);
+    const offTime = parseFloat($('pulseOff').value);
+    const ramp = parseFloat($('pulseRamp').value) / 1000;
+    const setGain = (val) => {
+      const now = audioCtx.currentTime;
+      if (toneGainL) { toneGainL.gain.cancelScheduledValues(now); toneGainL.gain.linearRampToValueAtTime(val, now + ramp); }
+      if (toneGainR) { toneGainR.gain.cancelScheduledValues(now); toneGainR.gain.linearRampToValueAtTime(val, now + ramp); }
+      if (noiseGain) { noiseGain.gain.cancelScheduledValues(now); noiseGain.gain.linearRampToValueAtTime(val, now + ramp); }
+      if (sweepGain) { sweepGain.gain.cancelScheduledValues(now); sweepGain.gain.linearRampToValueAtTime(val, now + ramp); }
+    };
+    let on = true;
+    const run = () => {
+      setGain(on ? Math.max(parseFloat($('gain').value), parseFloat($('noiseGain').value), parseFloat($('sweepGain').value)) : 0);
+      on = !on;
+      pulseInterval = setTimeout(run, on ? onTime : offTime);
+    };
+    pulseInterval = setTimeout(run, onTime);
+  };
+
+  const stopPulse = () => {
+    if (pulseInterval) { clearTimeout(pulseInterval); pulseInterval = null; }
+    if (audioCtx) {
+      const now = audioCtx.currentTime;
+      if (toneGainL) { toneGainL.gain.cancelScheduledValues(now); toneGainL.gain.linearRampToValueAtTime(parseFloat($('gain').value), now + 0.05); }
+      if (toneGainR) { toneGainR.gain.cancelScheduledValues(now); toneGainR.gain.linearRampToValueAtTime(parseFloat($('gain').value), now + 0.05); }
+      if (noiseGain) { noiseGain.gain.cancelScheduledValues(now); noiseGain.gain.linearRampToValueAtTime(parseFloat($('noiseGain').value), now + 0.05); }
+      if (sweepGain) { sweepGain.gain.cancelScheduledValues(now); sweepGain.gain.linearRampToValueAtTime(parseFloat($('sweepGain').value), now + 0.05); }
+    }
+  };
+
+  const stopAll = () => { stopTone(); stopNoise(); stopSweep(); stopPulse(); };
+  const resetAll = () => {
+    stopAll();
+    const defaults = {
+      frequency: 19000, gain: 0.2, detune: 0, noiseGain: 0.3, hpFilter: 17500, qFactor: 0.71,
+      sweepStart: 17500, sweepEnd: 22000, sweepDuration: 5, sweepGain: 0.25,
+      tremoloRate: 0, tremoloDepth: 0, vibratoRate: 0, vibratoDepth: 0,
+      lpFilter: 22000, bpFilter: 0, delayTime: 0, delayFb: 0, masterGain: 0.8,
+      pulseOn: 200, pulseOff: 200, pulseRamp: 20, binauralFreq: 10
+    };
+    for (const [id, val] of Object.entries(defaults)) {
+      const el = $(id); if (el) { el.value = val; el.dispatchEvent(new Event('input')); }
+    }
+  };
+
+  const bindSlider = (id, callback) => {
+    const el = $(id);
+    el.addEventListener('input', () => callback(parseFloat(el.value)));
+  };
+  bindSlider('frequency', v => {    $('freqVal').textContent = v + ' Hz';
+    if (toneOscLeft) toneOscLeft.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    if (toneOscRight) toneOscRight.frequency.setTargetAtTime(v + parseFloat($('binauralFreq').value), audioCtx.currentTime, 0.01);
+  });
+  bindSlider('gain', v => {
+    $('gainVal').textContent = v.toFixed(2);
+    if (toneGainL) toneGainL.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    if (toneGainR) toneGainR.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('detune', v => {
+    $('detuneVal').textContent = v;
+    if (toneOscLeft) toneOscLeft.detune.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    if (toneOscRight) toneOscRight.detune.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('binauralFreq', v => {
+    $('binauralVal').textContent = v + ' Hz';
+    if (toneOscRight) { const base = parseFloat($('frequency').value); toneOscRight.frequency.setTargetAtTime(base + v, audioCtx.currentTime, 0.01); }
+  });
+  bindSlider('hpFilter', v => {
+    $('hpVal').textContent = v + ' Hz';
+    if (noiseFilter) noiseFilter.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('qFactor', v => {
+    $('qVal').textContent = v.toFixed(2);
+    if (noiseFilter) noiseFilter.Q.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('noiseGain', v => {
+    $('noiseGainVal').textContent = v.toFixed(2);
+    if (noiseGain) noiseGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('sweepStart', v => $('sweepStartVal').textContent = v + ' Hz');
+  bindSlider('sweepEnd', v => $('sweepEndVal').textContent = v + ' Hz');
+  bindSlider('sweepDuration', v => $('sweepDurVal').textContent = v.toFixed(1) + ' s');
+  bindSlider('sweepGain', v => {
+    $('sweepGainVal').textContent = v.toFixed(2);
+    if (sweepGain) sweepGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('tremoloRate', v => {
+    $('tremoloRateVal').textContent = v.toFixed(1) + ' Hz';
+    if (effectsChain.tremoloLFO) effectsChain.tremoloLFO.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('tremoloDepth', v => {
+    $('tremoloDepthVal').textContent = v.toFixed(2);
+    if (effectsChain.tremoloDepthGain) effectsChain.tremoloDepthGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('vibratoRate', v => {
+    $('vibratoRateVal').textContent = v.toFixed(1) + ' Hz';
+    if (toneVibratoLFO) toneVibratoLFO.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('vibratoDepth', v => {    $('vibratoDepthVal').textContent = v;
+    if (toneVibratoDepthGain) toneVibratoDepthGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('lpFilter', v => {
+    $('lpVal').textContent = v + ' Hz';
+    if (effectsChain.lp) effectsChain.lp.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('bpFilter', v => {
+    $('bpVal').textContent = v === 0 ? 'Off' : v.toFixed(2);
+    if (effectsChain.bp) {
+      if (v > 0) effectsChain.bp.Q.setTargetAtTime(1 + v * 30, audioCtx.currentTime, 0.01);
+    }
+  });
+  bindSlider('delayTime', v => {
+    $('delayTimeVal').textContent = v.toFixed(2) + ' s';
+    if (effectsChain.delay) effectsChain.delay.delayTime.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('delayFb', v => {
+    $('delayFbVal').textContent = v.toFixed(2);
+    if (effectsChain.delayFb) effectsChain.delayFb.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    if (effectsChain.delayWet) effectsChain.delayWet.gain.setTargetAtTime(v > 0 ? 1 : 0, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('masterGain', v => {
+    $('masterGainVal').textContent = v.toFixed(2);
+    if (masterGainNode) masterGainNode.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+  });
+  bindSlider('pulseOn', v => {
+    $('pulseOnVal').textContent = v + ' ms';
+    if ($('pulseToggle').classList.contains('on')) { stopPulse(); applyPulseIfActive(); }
+  });
+  bindSlider('pulseOff', v => {
+    $('pulseOffVal').textContent = v + ' ms';
+    if ($('pulseToggle').classList.contains('on')) { stopPulse(); applyPulseIfActive(); }
+  });
+  bindSlider('pulseRamp', v => { $('pulseRampVal').textContent = v + ' ms'; });
+
+  document.querySelectorAll('[data-wave]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-wave]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (toneOscLeft) toneOscLeft.type = btn.dataset.wave;
+      if (toneOscRight) toneOscRight.type = btn.dataset.wave;
+    });
+  });
+  document.querySelectorAll('[data-noise]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-noise]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      noiseType = btn.dataset.noise;
+      if (isNoiseRunning) { stopNoise(); startNoise(); }    });
+  });
+
+  const makeToggle = (id, onChange) => {
+    const el = $(id);
+    el.addEventListener('click', () => { el.classList.toggle('on'); onChange(el.classList.contains('on')); });
+  };
+  makeToggle('binauralToggle', on => {
+    $('binauralControls').style.display = on ? 'block' : 'none';
+    if (isToneRunning) { stopTone(); startTone(); }
+  });
+  makeToggle('sweepLoopToggle', () => {});
+  makeToggle('pulseToggle', on => {
+    if (on) applyPulseIfActive(); else stopPulse();
+  });
+
+  $('toneStart').addEventListener('click', startTone);
+  $('toneStop').addEventListener('click', stopTone);
+  $('noiseStart').addEventListener('click', startNoise);
+  $('noiseStop').addEventListener('click', stopNoise);
+  $('sweepStart').addEventListener('click', startSweep);
+  $('sweepStop').addEventListener('click', stopSweep);
+  $('stopAll').addEventListener('click', stopAll);
+  $('resetBtn').addEventListener('click', resetAll);
+
+  const canvas = $('visualizer');
+  const ctx = canvas.getContext('2d');
+  let vizMode = 'waveform', spectrogramData = [];
+  const resizeCanvas = () => {
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * window.devicePixelRatio;
+    canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  };
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+  document.querySelectorAll('.viz-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.viz-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active'); vizMode = tab.dataset.viz; spectrogramData = [];
+    });
+  });
+
+  const startVisualization = () => {
+    const bufferLength = analyser.fftSize;
+    const timeData = new Uint8Array(bufferLength);
+    const freqData = new Uint8Array(analyser.frequencyBinCount);
+    const draw = () => {
+      requestAnimationFrame(draw);
+      const rect = canvas.getBoundingClientRect();
+      const W = rect.width, H = rect.height;      ctx.clearRect(0, 0, W, H);
+      ctx.strokeStyle = 'rgba(124,92,255,0.08)'; ctx.lineWidth = 1;
+      for (let i = 0; i <= 10; i++) { ctx.beginPath(); ctx.moveTo(0, H*i/10); ctx.lineTo(W, H*i/10); ctx.stroke(); }
+      if (vizMode === 'waveform') {
+        analyser.getByteTimeDomainData(timeData);
+        const sliceWidth = W / bufferLength;
+        ctx.lineWidth = 2;
+        const grad = ctx.createLinearGradient(0, 0, W, 0);
+        grad.addColorStop(0, '#7c5cff'); grad.addColorStop(1, '#00e5ff');
+        ctx.strokeStyle = grad; ctx.beginPath();
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const v = timeData[i] / 128.0; const y = v * H / 2;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          x += sliceWidth;
+        }
+        ctx.stroke();
+      } else if (vizMode === 'spectrum') {
+        analyser.getByteFrequencyData(freqData);
+        const barCount = 256; const barWidth = W / barCount;
+        const sampleRate = audioCtx.sampleRate;
+        const startBin = Math.floor(15000 * analyser.fftSize / sampleRate);
+        const endBin = Math.min(analyser.frequencyBinCount, Math.floor(24000 * analyser.fftSize / sampleRate));
+        const binRange = endBin - startBin;
+        for (let i = 0; i < barCount; i++) {
+          const bin = Math.floor(startBin + (binRange * i / barCount));
+          const val = freqData[bin] / 255; const barH = val * H;
+          const hue = 260 - val * 80;
+          ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${0.5 + val*0.5})`;
+          ctx.fillRect(i * barWidth, H - barH, barWidth - 1, barH);
+        }
+        ctx.fillStyle = 'rgba(138,138,160,0.8)'; ctx.font = '10px monospace';
+        for (let k = 15; k <= 24; k += 1) {
+          const x = ((k - 15) / 9) * W;
+          ctx.fillText(k + 'k', x, H - 4);
+        }
+      } else if (vizMode === 'spectrogram') {
+        analyser.getByteFrequencyData(freqData);
+        const sampleRate = audioCtx.sampleRate;
+        const startBin = Math.floor(15000 * analyser.fftSize / sampleRate);
+        const endBin = Math.min(analyser.frequencyBinCount, Math.floor(24000 * analyser.fftSize / sampleRate));
+        const row = [];
+        for (let i = 0; i < W; i++) {
+          const bin = Math.floor(startBin + ((endBin - startBin) * i / W));
+          row.push(freqData[bin]);
+        }
+        spectrogramData.push(row);
+        if (spectrogramData.length > H) spectrogramData.shift();
+        const img = ctx.createImageData(W, H);
+        for (let y = 0; y < spectrogramData.length; y++) {          const rowY = H - spectrogramData.length + y;
+          for (let x = 0; x < W; x++) {
+            const v = spectrogramData[y][x] / 255;
+            const idx = (rowY * W + x) * 4;
+            img.data[idx] = Math.floor(v * 120);
+            img.data[idx+1] = Math.floor(v * 80 + v * v * 100);
+            img.data[idx+2] = Math.floor(v * 255);
+            img.data[idx+3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.font = '10px monospace';
+        for (let k = 15; k <= 24; k += 3) {
+          const x = ((k - 15) / 9) * W;
+          ctx.fillText(k + 'k', x + 2, 12);
+        }
+      }
+      analyser.getByteTimeDomainData(timeData);
+      let peak = 0;
+      for (let i = 0; i < timeData.length; i++) {
+        const v = Math.abs(timeData[i] - 128);
+        if (v > peak) peak = v;
+      }
+      $('levelMeter').style.width = ((peak / 128) * 100).toFixed(1) + '%';
+    };
+    draw();
+  };
+
+  const presets = {
+    mosquito: () => {
+      $('frequency').value = 17500; $('frequency').dispatchEvent(new Event('input'));
+      $('gain').value = 0.15; $('gain').dispatchEvent(new Event('input'));
+      stopAll(); startTone();
+    },
+    teen: () => {
+      $('frequency').value = 19000; $('frequency').dispatchEvent(new Event('input'));
+      $('gain').value = 0.15; $('gain').dispatchEvent(new Event('input'));
+      stopAll(); startTone();
+    },
+    ultra: () => {
+      $('sweepStart').value = 18000; $('sweepStart').dispatchEvent(new Event('input'));
+      $('sweepEnd').value = 22000; $('sweepEnd').dispatchEvent(new Event('input'));
+      $('sweepDuration').value = 10; $('sweepDuration').dispatchEvent(new Event('input'));
+      $('sweepCurve').value = 'exponential';
+      $('sweepGain').value = 0.2; $('sweepGain').dispatchEvent(new Event('input'));
+      stopAll(); startSweep();
+    },
+    noise: () => {
+      document.querySelectorAll('[data-noise]').forEach(b => b.classList.remove('active'));
+      document.querySelector('[data-noise="blue"]').classList.add('active');      noiseType = 'blue';
+      $('hpFilter').value = 18000; $('hpFilter').dispatchEvent(new Event('input'));
+      $('noiseGain').value = 0.25; $('noiseGain').dispatchEvent(new Event('input'));
+      stopAll(); startNoise();
+    },
+    binaural: () => {
+      $('frequency').value = 20000; $('frequency').dispatchEvent(new Event('input'));
+      $('gain').value = 0.15; $('gain').dispatchEvent(new Event('input'));
+      $('binauralFreq').value = 15; $('binauralFreq').dispatchEvent(new Event('input'));
+      $('binauralToggle').classList.add('on');
+      $('binauralControls').style.display = 'block';
+      stopAll(); startTone();
+    },
+    pulse: () => {
+      $('frequency').value = 18000; $('frequency').dispatchEvent(new Event('input'));
+      $('gain').value = 0.2; $('gain').dispatchEvent(new Event('input'));
+      $('pulseOn').value = 250; $('pulseOn').dispatchEvent(new Event('input'));
+      $('pulseOff').value = 250; $('pulseOff').dispatchEvent(new Event('input'));
+      $('pulseToggle').classList.add('on');
+      stopAll(); startTone(); applyPulseIfActive();
+    }
+  };
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (presets[btn.dataset.preset]) presets[btn.dataset.preset]();
+    });
+  });
+})();
+</script>
+</body>
+</html>
